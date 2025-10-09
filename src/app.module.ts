@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import 'dotenv/config';
+import { PlotsModule } from './plots/plots.module';
+import { HarvestsModule } from './harvests/harvests.module';
 
 @Module({
   imports: [
@@ -14,8 +14,8 @@ import 'dotenv/config';
       synchronize: false,
       logging: true,
     }),
+    PlotsModule,
+    HarvestsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}
