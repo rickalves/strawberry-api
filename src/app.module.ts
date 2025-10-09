@@ -1,10 +1,21 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import 'dotenv/config';
+import { PlotsModule } from './plots/plots.module';
+import { HarvestsModule } from './harvests/harvests.module';
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      url: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      autoLoadEntities: true,
+      synchronize: false,
+      logging: true,
+    }),
+    PlotsModule,
+    HarvestsModule,
+  ],
 })
 export class AppModule {}
