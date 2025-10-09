@@ -1,0 +1,426 @@
+{
+	"info": {
+		"_postman_id": "5b077b68-cc1d-4b96-b925-ace4c9cdb5d5",
+		"name": "strawberry-api",
+		"description": "Coleção de testes para a API de morangos (plots/canteiros e harvests/colheitas). Inclui scripts de testes e variáveis encadeadas.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "26568587"
+	},
+	"item": [
+		{
+			"name": "Plots",
+			"item": [
+				{
+					"name": "Create Plot",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 201', function () {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"",
+									"const json = pm.response.json();",
+									"pm.expect(json).to.have.property('id');",
+									"pm.expect(json).to.have.property('nome');",
+									"pm.expect(json).to.have.property('area_m2');",
+									"",
+									"// Save plotId",
+									"pm.collectionVariables.set('plotId', json.id);",
+									"pm.test('plotId salvo', function(){",
+									"  pm.expect(pm.collectionVariables.get('plotId')).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Gera um número inteiro aleatório entre 1 e 1000\r",
+									"let randomInt = Math.floor(Math.random() * 1000) + 1;\r",
+									"\r",
+									"// Armazena em variável global (ou local)\r",
+									"pm.variables.set(\"randomInt\", randomInt);\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"nome\": \"Canteiro A {{randomInt}}\",\r\n    \"area_m2\": 320.5,\r\n    \"inicio_plantio\": \"{{today}}\"\r\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/plots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"plots"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Plots",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json).to.be.an('array');"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/plots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"plots"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Plot by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json.id).to.eql(pm.collectionVariables.get('plotId'));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/plots/{{plotId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"plots",
+								"{{plotId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Plot",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(Number(json.area_m2)).to.eql(130.75);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"area_m2\": 130.75}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/plots/{{plotId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"plots",
+								"{{plotId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Plot Summary (total kg)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json).to.have.property('plotId');",
+									"pm.expect(json).to.have.property('total_kg');"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/plots/{{plotId}}/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"plots",
+								"{{plotId}}",
+								"summary"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Harvests",
+			"item": [
+				{
+					"name": "Create Harvest",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', function () {",
+									"  pm.response.to.have.status(201);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json).to.have.property('id');",
+									"pm.collectionVariables.set('harvestId', json.id);",
+									"pm.test('harvestId salvo', function(){",
+									"  pm.expect(pm.collectionVariables.get('harvestId')).to.be.a('string');",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"plotId\": \"{{plotId}}\", \"data\": \"{{today}}\", \"peso_kg\": 25.2, \"qualidade\": \"A\"}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/harvests",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"harvests"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Harvests",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json).to.be.an('array');",
+									"if (json.length > 0) {",
+									"  pm.collectionVariables.set('harvestId', json[0].id || pm.collectionVariables.get('harvestId'));",
+									"}"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/harvests",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"harvests"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Harvests by Plot",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json).to.be.an('array');",
+									"json.forEach(it => pm.expect(it).to.have.property('plot'));"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/harvests/plot/{{plotId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"harvests",
+								"plot",
+								"{{plotId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Cleanup (opcional)",
+			"item": [
+				{
+					"name": "Delete Plot (cascata)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', function () {",
+									"  pm.response.to.have.status(200);",
+									"});",
+									"const json = pm.response.json();",
+									"pm.expect(json.ok).to.eql(true);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/plots/{{plotId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"plots",
+								"{{plotId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000"
+		},
+		{
+			"key": "plotId",
+			"value": ""
+		},
+		{
+			"key": "harvestId",
+			"value": ""
+		},
+		{
+			"key": "today",
+			"value": "2025-10-09"
+		}
+	]
+}
