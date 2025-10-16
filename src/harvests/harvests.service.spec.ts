@@ -100,7 +100,13 @@ describe('HarvestsService', () => {
       expect(plotRepo.findOne).toHaveBeenCalledWith({
         where: { id: 'some-uuid' },
       });
-      expect(repo.create).toHaveBeenCalledWith(createHarvestDto);
+      // service creates the harvest using the found plot object, not the raw DTO
+      expect(repo.create).toHaveBeenCalledWith({
+        plot: mockPlot,
+        data: createHarvestDto.data,
+        peso_kg: createHarvestDto.peso_kg,
+        qualidade: createHarvestDto.qualidade,
+      });
       expect(repo.save).toHaveBeenCalledWith(createdHarvest);
       expect(result).toEqual(createdHarvest);
     });
