@@ -1,7 +1,7 @@
 // dto/recover-password.dto.ts
 import { IsEmail } from 'class-validator';
 
-export class RecoverPasswordDto {
+export class RecoverDto {
   @IsEmail()
   email: string;
 }

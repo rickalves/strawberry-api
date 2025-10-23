@@ -1,28 +1,31 @@
+// src/auth/auth.controller.ts
 import {
-  Controller,
-  Post,
   Body,
+  Controller,
   Get,
-  Req,
-  Res,
-  HttpException,
+  HttpCode,
   HttpStatus,
+  Post,
+  Patch,
+  UseGuards,
+  HttpException,
   UnauthorizedException,
+  Res,
 } from '@nestjs/common';
-import { Request } from 'express';
+
 import type { Response } from 'express';
 import type { User } from '@supabase/supabase-js';
+
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { RecoverPasswordDto } from './dto/recover-password.dto';
+import { RecoverDto as RecoverPasswordDto } from './dto/recover.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
-import { Public } from './decorators/public.decorator';
 
-// Extende o Request do Express para incluir o usuário autenticado
-interface TokenRequest extends Request {
-  user?: User;
-}
+import { AccessTokenGuard } from './guards/access-token.guard';
+import { CurrentUser as UserDecorator } from './decorators/user.decorator';
+import { Roles } from './decorators/roles.decorator';
+import { RolesGuard } from './guards/roles.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -31,7 +34,7 @@ export class AuthController {
   /**
    * Registro de usuário — público
    */
-  @Public()
+  @HttpCode(HttpStatus.CREATED)
   @Post('register')
   async register(@Body() dto: RegisterDto): Promise<unknown> {
     try {
@@ -46,10 +49,12 @@ export class AuthController {
   /**
    * Login — público. Define headers com tokens e retorna apenas o usuário
    */
-  @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('login')
   async login(
     @Body() dto: LoginDto,
+    // res é opcionalmente injetado pelo Nest; com passthrough não precisamos retornar Response
+    // e ainda conseguimos setar headers customizados
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ user: User | null }> {
     try {
@@ -70,7 +75,7 @@ export class AuthController {
   /**
    * Login com Google — público. Retorna URL de redirecionamento
    */
-  @Public()
+  @HttpCode(HttpStatus.OK)
   @Get('login/google')
   async loginGoogle(): Promise<{ url: string }> {
     try {
@@ -90,20 +95,22 @@ export class AuthController {
   }
 
   /**
-   * Retorna dados do usuário autenticado — protegido
+   * Retorna dados do usuário autenticado — protegido (Bearer)
    */
+  @UseGuards(AccessTokenGuard)
+  @HttpCode(HttpStatus.OK)
   @Get('me')
-  getProfile(@Req() req: TokenRequest): User {
-    if (!req.user) {
+  getProfile(@UserDecorator() user: User): User {
+    if (!user) {
       throw new UnauthorizedException('Usuário não autenticado');
     }
-    return req.user;
+    return user;
   }
 
   /**
    * Solicita recuperação de senha — público
    */
-  @Public()
+  @HttpCode(HttpStatus.OK)
   @Post('recover-password')
   async recoverPassword(
     @Body() dto: RecoverPasswordDto,
@@ -118,11 +125,12 @@ export class AuthController {
   }
 
   /**
-   * Atualiza senha do usuário autenticado — protegido
+   * Atualiza senha do usuário autenticado — protegido (Bearer)
    */
-  @Post('update-password')
+  @UseGuards(AccessTokenGuard)
+  @HttpCode(HttpStatus.OK)
+  @Patch('update-password')
   async updatePassword(
-    @Req() req: TokenRequest,
     @Body() dto: UpdatePasswordDto,
   ): Promise<{ message: string }> {
     try {
@@ -135,8 +143,10 @@ export class AuthController {
   }
 
   /**
-   * Logout do usuário autenticado — protegido
+   * Logout do usuário autenticado — protegido (Bearer)
    */
+  @UseGuards(AccessTokenGuard)
+  @HttpCode(HttpStatus.OK)
   @Post('logout')
   async logout(): Promise<{ message: string }> {
     try {
@@ -146,5 +156,24 @@ export class AuthController {
         err instanceof Error ? err.message : 'Erro ao fazer logout';
       throw new HttpException(message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  /**
+   * Rota protegida para "user" (ou "admin")
+   */
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles('user', 'admin')
+  @Get('test/user')
+  testUser(@UserDecorator() user: User) {
+    const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+    const role =
+      typeof metadata['role'] === 'string' ? metadata['role'] : 'user';
+
+    return {
+      ok: true,
+      route: '/auth/test/user',
+      uid: user.id,
+      role,
+    };
   }
 }

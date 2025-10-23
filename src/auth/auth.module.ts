@@ -1,39 +1,24 @@
 // src/auth/auth.module.ts
-
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
-
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { supabaseClientProvider } from './supabase-client.provider';
-import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Module({
-  // ⬇️ Os módulos que este módulo importa
   imports: [
-    ConfigModule, // Carrega variáveis de ambiente do .env
+    // Se já é global no AppModule, você pode remover aqui.
+    ConfigModule,
   ],
-
-  // ⬇️ Os controllers que ficam responsáveis por expor as rotas de autenticação
-  controllers: [
-    AuthController, // Define endpoints como /auth/login, /auth/register, etc.
-  ],
-
-  // ⬇️ Os providers são classes ou valores injetáveis no container do Nest
+  controllers: [AuthController],
   providers: [
-    AuthService, // Lógica de registro, login, refresh, etc.
-    supabaseClientProvider, // Provider que instancia o SupabaseClient com a service role key
-    {
-      // Aqui registramos o guard globalmente
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard, // JwtAuthGuard será aplicado em TODAS as rotas (exceto marcadas @Public())
-    },
+    AuthService,
+    supabaseClientProvider, // instancia o SupabaseClient (anon key) para o serviço
+    // Não registramos guard global: o AccessTokenGuard é aplicado por rota.
   ],
-
-  // ⬇️ O que este módulo exporta para outros módulos
   exports: [
-    supabaseClientProvider, // Permite que outros módulos (ex.: AppModule) também injetem o SupabaseClient
+    supabaseClientProvider, // permite injetar o SupabaseClient em outros módulos caso necessário
+    AuthService,
   ],
 })
 export class AuthModule {}

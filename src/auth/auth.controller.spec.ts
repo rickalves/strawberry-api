@@ -1,121 +1,133 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { SUPABASE_CLIENT } from './supabase-client.provider';
-import { UnauthorizedException } from '@nestjs/common';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { RecoverDto as RecoverPasswordDto } from './dto/recover.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
+import type { Response } from 'express';
+import type { User } from '@supabase/supabase-js';
 
-describe('AuthController', () => {
+type MockedAuthService = jest.Mocked<{
+  register: (dto: RegisterDto) => Promise<any>;
+  login: (dto: LoginDto) => Promise<{ user: User | null; session: any }>;
+  loginWithGoogle: () => Promise<{ url?: string } | null>;
+  recoverPassword: (email: string) => Promise<{ message: string }>;
+  updatePassword: (dto: UpdatePasswordDto) => Promise<{ message: string }>;
+  logout: () => Promise<{ message: string }>;
+}>;
+
+describe('AuthController (comprehensive)', () => {
   let controller: AuthController;
-
-  const mockAuthService = {
-    register: jest.fn().mockResolvedValue({
-      user: { email: 'teste@example.com' },
-      session: { access_token: 'token123', refresh_token: 'refresh123' },
-    }),
-    login: jest.fn().mockResolvedValue({
-      user: { email: 'teste@example.com' },
-      session: { access_token: 'token123', refresh_token: 'refresh123' },
-    }),
-    loginWithGoogle: jest
-      .fn()
-      .mockResolvedValue({ url: 'http://redirect.url' }),
-    recoverPassword: jest
-      .fn()
-      .mockResolvedValue({ message: 'Recovery email sent' }),
-    updatePassword: jest
-      .fn()
-      .mockResolvedValue({ message: 'Password updated' }),
-    logout: jest.fn().mockResolvedValue({ message: 'Logout successful' }),
-  };
-
-  const mockSupabaseClient = {};
+  let service: MockedAuthService;
 
   beforeEach(async () => {
+    const serviceMock = {
+      register: jest.fn(),
+      login: jest.fn(),
+      loginWithGoogle: jest.fn(),
+      recoverPassword: jest.fn(),
+      updatePassword: jest.fn(),
+      logout: jest.fn(),
+    } as unknown as MockedAuthService;
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [
-        { provide: AuthService, useValue: mockAuthService },
-        { provide: SUPABASE_CLIENT, useValue: mockSupabaseClient },
-      ],
+      providers: [{ provide: AuthService, useValue: serviceMock }],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
+    service = module.get<MockedAuthService>(AuthService);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
-  it('should register a user', async () => {
-    const dto = {
-      full_name: 'User Test',
-      email: 'teste@example.com',
-      password: '123456',
+  it('register -> delegates to service.register', async () => {
+    const dto: RegisterDto = {
+      full_name: 'Test User',
+      email: 't@example.com',
+      password: 'p',
     };
+    service.register.mockResolvedValue({ id: 'u1' });
     const result = await controller.register(dto);
-    expect(mockAuthService.register).toHaveBeenCalledWith(dto);
-    expect((result as any).session.access_token).toBe('token123');
+    expect(service.register).toHaveBeenCalledWith(dto);
+    expect(result).toEqual({ id: 'u1' });
   });
 
-  it('should login a user and set headers', async () => {
-    const dto = { email: 'teste@example.com', password: '123456' };
-    const headers: Record<string, string> = {};
-    const mockRes: any = {
-      setHeader: (key: string, value: string) => {
-        headers[key] = value;
-      },
-    };
+  it('login -> sets headers and returns user', async () => {
+    const dto: LoginDto = { email: 'a@b.com', password: 'p' };
+    const user = {
+      id: 'u1',
+      email: dto.email,
+    } as unknown as User;
+    const session = { access_token: 'at', refresh_token: 'rt' };
+    service.login.mockResolvedValue({ user, session });
 
-    const result = await controller.login(dto, mockRes);
+    const setHeader = jest.fn();
+    const res = { setHeader } as unknown as Response;
 
-    expect(mockAuthService.login).toHaveBeenCalledWith(dto);
-    expect(headers['Authorization']).toBe('Bearer token123');
-    expect(headers['x-refresh-token']).toBe('refresh123');
-    expect(result.user!.email).toBe('teste@example.com');
+    const result = await controller.login(dto, res);
+
+    expect(service.login).toHaveBeenCalledWith(dto);
+    expect(setHeader).toHaveBeenCalledWith(
+      'Authorization',
+      `Bearer ${session.access_token}`,
+    );
+    expect(setHeader).toHaveBeenCalledWith(
+      'x-refresh-token',
+      session.refresh_token,
+    );
+    expect(result).toEqual({ user });
   });
 
-  it('should return login URL for Google', async () => {
+  it('loginGoogle -> returns url or throws on missing url', async () => {
+    service.loginWithGoogle.mockResolvedValue({ url: 'http://example.com' });
     const result = await controller.loginGoogle();
-    expect(mockAuthService.loginWithGoogle).toHaveBeenCalled();
-    expect(result).toEqual({ url: 'http://redirect.url' });
+    expect(service.loginWithGoogle).toHaveBeenCalled();
+    expect(result).toEqual({ url: 'http://example.com' });
+
+    service.loginWithGoogle.mockResolvedValue(null);
+    await expect(controller.loginGoogle()).rejects.toThrow();
   });
 
-  it('should get profile when user is set', () => {
-    const mockReq: any = { user: { email: 'teste@example.com' } };
-    expect(controller.getProfile(mockReq)).toEqual({
-      email: 'teste@example.com',
-    });
+  it('getProfile -> returns user or throws if missing', () => {
+    const user = {
+      id: 'u1',
+    } as unknown as User;
+    expect(controller.getProfile(user)).toEqual(user);
+    expect(() => controller.getProfile(null as unknown as User)).toThrow();
   });
 
-  it('should throw on getProfile when no user', () => {
-    const mockReq: any = {};
-    expect(() => controller.getProfile(mockReq)).toThrow(UnauthorizedException);
-  });
-
-  it('should recover password', async () => {
-    const dto = { email: 'teste@example.com' };
+  it('recoverPassword -> delegates to service.recoverPassword', async () => {
+    const dto: RecoverPasswordDto = { email: 'a@b.com' } as RecoverPasswordDto;
+    service.recoverPassword.mockResolvedValue({ message: 'ok' });
     const result = await controller.recoverPassword(dto);
-    expect(mockAuthService.recoverPassword).toHaveBeenCalledWith(dto.email);
-    expect(result).toEqual({ message: 'Recovery email sent' });
+    expect(service.recoverPassword).toHaveBeenCalledWith(dto.email);
+    expect(result).toEqual({ message: 'ok' });
   });
 
-  it('should update password', async () => {
-    const dto = {
-      token: 'dummy-token',
-      currentPassword: '123456',
-      newPassword: '654321',
-    };
-    const mockReq: any = { user: { email: 'teste@example.com' } };
-    const result = await controller.updatePassword(mockReq, dto);
-    expect(mockAuthService.updatePassword).toHaveBeenCalledWith(dto);
-    expect(result).toEqual({ message: 'Password updated' });
+  it('updatePassword -> delegates to service.updatePassword', async () => {
+    const dto: UpdatePasswordDto = {
+      token: 't',
+      newPassword: 'newpass',
+    } as unknown as UpdatePasswordDto;
+    service.updatePassword.mockResolvedValue({ message: 'ok' });
+    const result = await controller.updatePassword(dto);
+    expect(service.updatePassword).toHaveBeenCalledWith(dto);
+    expect(result).toEqual({ message: 'ok' });
   });
 
-  it('should logout', async () => {
+  it('logout -> delegates to service.logout', async () => {
+    service.logout.mockResolvedValue({ message: 'ok' });
     const result = await controller.logout();
-    expect(mockAuthService.logout).toHaveBeenCalled();
-    expect(result).toEqual({ message: 'Logout successful' });
+    expect(service.logout).toHaveBeenCalled();
+    expect(result).toEqual({ message: 'ok' });
+  });
+
+  it('testUser -> returns metadata with role', () => {
+    const user = {
+      id: 'u1',
+      user_metadata: { role: 'admin' },
+    } as unknown as User;
+    const result = controller.testUser(user);
+    expect(result).toMatchObject({ ok: true, uid: 'u1', role: 'admin' });
   });
 });
