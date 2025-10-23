@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import 'dotenv/config';
 import { PlotsModule } from './plots/plots.module';
 import { HarvestsModule } from './harvests/harvests.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { HarvestsModule } from './harvests/harvests.module';
     }),
     PlotsModule,
     HarvestsModule,
+    AuthModule,
   ],
 })
 export class AppModule {}
