@@ -26,6 +26,8 @@ import { AccessTokenGuard } from './guards/access-token.guard';
 import { CurrentUser as UserDecorator } from './decorators/user.decorator';
 import { Roles } from './decorators/roles.decorator';
 import { RolesGuard } from './guards/roles.guard';
+import { AdminCreateUserDto } from './dto/admin-create-user.dto';
+import { SetRoleDto } from './dto/set-role.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -175,5 +177,77 @@ export class AuthController {
       uid: user.id,
       role,
     };
+  }
+  /**
+   * ADMIN: cria usuário já com role segura em app_metadata
+   */
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles('admin')
+  @HttpCode(HttpStatus.CREATED)
+  @Post('admin/create-user')
+  async adminCreateUser(@Body() dto: AdminCreateUserDto) {
+    try {
+      const user = await this.authService.adminCreateUser({
+        email: dto.email,
+        password: dto.password,
+        fullName: dto.fullName,
+        role: dto.role ?? 'user',
+        emailConfirm: dto.emailConfirm ?? false,
+      });
+
+      const appMetadata = (user.app_metadata ?? {}) as Record<string, unknown>;
+      const role =
+        typeof appMetadata['role'] === 'string' ? appMetadata['role'] : 'user';
+
+      return {
+        ok: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          role,
+        },
+      };
+    } catch (err: unknown) {
+      const defaultMessage = 'Erro ao criar usuário (admin)';
+      let message = defaultMessage;
+      let status = HttpStatus.BAD_REQUEST;
+      if (err instanceof HttpException) {
+        message = err.message;
+        status = err.getStatus();
+      }
+      throw new HttpException(message, status);
+    }
+  }
+  /**
+   * ADMIN: altera a role de um usuário (app_metadata.role)
+   */
+  @UseGuards(AccessTokenGuard, RolesGuard)
+  @Roles('admin')
+  @HttpCode(HttpStatus.OK)
+  @Patch('admin/set-role')
+  async setRole(@Body() dto: SetRoleDto) {
+    try {
+      const user = await this.authService.setRole(dto.userId, dto.role);
+      const appMetadata = (user.app_metadata ?? {}) as Record<string, unknown>;
+      const role =
+        typeof appMetadata['role'] === 'string' ? appMetadata['role'] : 'user';
+      return {
+        ok: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          role,
+        },
+      };
+    } catch (err: any) {
+      const defaultMessage = 'Erro ao criar usuário (admin)';
+      let message = defaultMessage;
+      let status = HttpStatus.BAD_REQUEST;
+      if (err instanceof HttpException) {
+        message = err.message;
+        status = err.getStatus();
+      }
+      throw new HttpException(message, status);
+    }
   }
 }

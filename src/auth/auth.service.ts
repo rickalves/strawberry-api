@@ -11,6 +11,7 @@ import { SUPABASE_CLIENT } from './supabase-client.provider';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { SUPABASE_ADMIN_CLIENT } from './supabase-admin.provider';
 
 interface AuthResponse {
   user: User | null;
@@ -21,6 +22,8 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   constructor(
     @Inject(SUPABASE_CLIENT) private readonly supabase: SupabaseClient,
+    @Inject(SUPABASE_ADMIN_CLIENT)
+    private readonly supabaseAdmin: SupabaseClient,
   ) {}
 
   async register({
@@ -28,13 +31,14 @@ export class AuthService {
     email,
     password,
   }: RegisterDto): Promise<AuthResponse> {
-    const { data, error } = await this.supabase.auth.signUp({
+    const { data, error } = await this.supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: { full_name: full_name },
+      user_metadata: {
+        full_name,
         emailRedirectTo: process.env.APP_CALLBACK_URL,
       },
+      role: 'user',
     });
 
     if (error) {
@@ -43,7 +47,7 @@ export class AuthService {
 
     return {
       user: data.user ?? null,
-      session: data.session ?? null,
+      session: null,
     };
   }
 
@@ -187,5 +191,42 @@ export class AuthService {
       session: data.session,
       user: data.user,
     };
+  }
+  // Admin functions
+  // Criação de usuário já com role segura em app_metadata
+  async adminCreateUser(params: {
+    email: string;
+    password: string;
+    fullName?: string;
+    role?: 'user' | 'admin' | 'manager';
+    emailConfirm?: boolean;
+  }) {
+    const {
+      email,
+      password,
+      fullName,
+      role = 'user',
+      emailConfirm = false,
+    } = params;
+
+    const { data, error } = await this.supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: emailConfirm,
+      app_metadata: { role },
+      user_metadata: { full_name: fullName },
+    });
+
+    if (error) throw error;
+    return data.user;
+  }
+  // Promover/despromover um usuário com segurança
+  async setRole(userId: string, role: 'user' | 'admin' | 'manager') {
+    const { data, error } = await this.supabaseAdmin.auth.admin.updateUserById(
+      userId,
+      { app_metadata: { role } },
+    );
+    if (error) throw error;
+    return data.user;
   }
 }
