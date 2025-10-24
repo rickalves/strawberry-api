@@ -91,7 +91,7 @@ describe('AuthService', () => {
       error: null,
     });
     const result = await service.register({
-      full_name: 'Test User',
+      fullName: 'Test User',
       email: 'test@example.com',
       password: 'password123',
     });
@@ -100,7 +100,7 @@ describe('AuthService', () => {
       email: 'test@example.com',
       password: 'password123',
       options: {
-        data: { full_name: 'Test User', role: 'user' },
+        data: { fullName: 'Test User', role: 'user' },
         emailRedirectTo: process.env.APP_CALLBACK_URL,
       },
     });

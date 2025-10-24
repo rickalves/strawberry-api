@@ -4,6 +4,9 @@ import { PlotsService } from './plots.service';
 import { CreatePlotDto } from './dto/create-plot.dto';
 import { UpdatePlotDto } from './dto/update-plot.dto';
 import { Plot } from './plot.entity';
+import { AccessTokenGuard } from '../auth/guards/access-token.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { AuthService } from '../auth/auth.service';
 
 // Tipagem do retorno de summary
 type Summary = { plotId: string; total_kg: number };
@@ -38,6 +41,22 @@ describe('PlotsController', () => {
         {
           provide: PlotsService,
           useValue: serviceMock,
+        },
+        // mocks para os guards usados por @UseGuards(...)
+        {
+          provide: AccessTokenGuard,
+          useValue: { canActivate: jest.fn(() => true) },
+        },
+        {
+          provide: RolesGuard,
+          useValue: { canActivate: jest.fn(() => true) },
+        },
+        // mock do AuthService para injeção no AccessTokenGuard
+        {
+          provide: AuthService,
+          useValue: {
+            validateToken: jest.fn().mockResolvedValue({ id: 'u1' }),
+          },
         },
       ],
     }).compile();

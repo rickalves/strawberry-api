@@ -167,15 +167,10 @@ export class AuthController {
   @Roles('user', 'admin')
   @Get('test/user')
   testUser(@UserDecorator() user: User) {
-    const metadata = (user.user_metadata ?? {}) as Record<string, unknown>;
-    const role =
-      typeof metadata['role'] === 'string' ? metadata['role'] : 'user';
-
     return {
       ok: true,
-      route: '/auth/test/user',
       uid: user.id,
-      role,
+      role: user.app_metadata.role as string,
     };
   }
   /**

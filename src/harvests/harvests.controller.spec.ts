@@ -3,6 +3,9 @@ import { HarvestsController } from './harvests.controller';
 import { HarvestsService } from './harvests.service';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { Harvest } from './harvest.entity';
+import { AccessTokenGuard } from '../auth/guards/access-token.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { AuthService } from '../auth/auth.service';
 
 // Mock do service usado pelo controller
 type HarvestsServiceMock = jest.Mocked<{
@@ -44,6 +47,22 @@ describe('HarvestsController', () => {
         {
           provide: HarvestsService,
           useValue: serviceMock,
+        },
+        // mocks para os guards usados por @UseGuards(...)
+        {
+          provide: AccessTokenGuard,
+          useValue: { canActivate: jest.fn(() => true) },
+        },
+        {
+          provide: RolesGuard,
+          useValue: { canActivate: jest.fn(() => true) },
+        },
+        // mock do AuthService para injeção no AccessTokenGuard
+        {
+          provide: AuthService,
+          useValue: {
+            validateToken: jest.fn().mockResolvedValue({ id: 'u1' }),
+          },
         },
       ],
     }).compile();

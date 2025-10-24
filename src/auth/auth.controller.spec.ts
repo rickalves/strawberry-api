@@ -42,7 +42,7 @@ describe('AuthController (comprehensive)', () => {
 
   it('register -> delegates to service.register', async () => {
     const dto: RegisterDto = {
-      full_name: 'Test User',
+      fullName: 'Test User',
       email: 't@example.com',
       password: 'p',
     };
@@ -122,10 +122,10 @@ describe('AuthController (comprehensive)', () => {
     expect(result).toEqual({ message: 'ok' });
   });
 
-  it('testUser -> returns metadata with role', () => {
+  it('should return user metadata', () => {
     const user = {
       id: 'u1',
-      user_metadata: { role: 'admin' },
+      app_metadata: { role: 'admin' },
     } as unknown as User;
     const result = controller.testUser(user);
     expect(result).toMatchObject({ ok: true, uid: 'u1', role: 'admin' });

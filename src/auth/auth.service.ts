@@ -27,7 +27,7 @@ export class AuthService {
   ) {}
 
   async register({
-    full_name,
+    fullName,
     email,
     password,
   }: RegisterDto): Promise<AuthResponse> {
@@ -35,7 +35,7 @@ export class AuthService {
       email,
       password,
       options: {
-        data: { full_name, role: 'user' },
+        data: { fullName, role: 'user' },
         emailRedirectTo: process.env.APP_CALLBACK_URL,
       },
     });

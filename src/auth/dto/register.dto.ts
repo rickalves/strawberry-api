@@ -2,7 +2,7 @@ import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @IsString()
-  full_name: string;
+  fullName: string;
 
   @IsEmail()
   email: string;
