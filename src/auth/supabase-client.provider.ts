@@ -2,6 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
 
+// Provider do Supabase Client padrão (anon key)
 export const SUPABASE_CLIENT = 'SUPABASE_CLIENT';
 
 export const supabaseClientProvider = {
@@ -13,7 +14,7 @@ export const supabaseClientProvider = {
   ): ReturnType<typeof createClient> => {
     const supabaseUrl = configService.get<string>('SUPABASE_URL') as string;
     const supabaseKey = configService.get<string>(
-      'SUPABASE_SERVICE_ROLE_KEY',
+      'SUPABASE_ANON_KEY',
     ) as string;
     return createClient(supabaseUrl, supabaseKey);
   },

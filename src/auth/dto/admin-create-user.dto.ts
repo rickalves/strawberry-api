@@ -21,7 +21,7 @@ export class AdminCreateUserDto {
   fullName?: string;
 
   @IsOptional()
-  @IsIn(['admin', 'manager', 'a'])
+  @IsIn(['admin', 'manager', 'user'])
   role?: 'admin' | 'manager' | 'user';
 
   @IsOptional()

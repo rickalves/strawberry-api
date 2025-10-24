@@ -31,14 +31,13 @@ export class AuthService {
     email,
     password,
   }: RegisterDto): Promise<AuthResponse> {
-    const { data, error } = await this.supabase.auth.admin.createUser({
+    const { data, error } = await this.supabase.auth.signUp({
       email,
       password,
-      user_metadata: {
-        full_name,
+      options: {
+        data: { full_name, role: 'user' },
         emailRedirectTo: process.env.APP_CALLBACK_URL,
       },
-      role: 'user',
     });
 
     if (error) {
@@ -47,7 +46,7 @@ export class AuthService {
 
     return {
       user: data.user ?? null,
-      session: null,
+      session: data.session ?? null,
     };
   }
 
